@@ -23,7 +23,7 @@ HELIUM_EXTENSION_EXPORT map<string, string> extension_metadata()
 
 int hcalc(string_view event_name, list<any> param)
 {
-	
+	return 0;
 }
 
 HELIUM_EXTENSION_EXPORT int on_self_load()
