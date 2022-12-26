@@ -27,6 +27,7 @@
 #include <string>
 #include <list>
 #include <any>
+#include <format>
 
 #include <exprtk_mpfr_adaptor.hpp>
 #include <exprtk.hpp>
@@ -45,6 +46,9 @@ symbol_table_t hcalc_symbol_table;
 expression_t hcalc_expression;
 string hcalc_expression_string;
 parser_t hcalc_expression_parser;
+vector<string> hcalc_error_strs;
+
+HeliumExtensionLogger logger("Helium", "Calculator");
 
 HELIUM_EXTENSION_EXPORT map<string, string> extension_metadata()
 {
@@ -57,8 +61,46 @@ HELIUM_EXTENSION_EXPORT map<string, string> extension_metadata()
 	};
 }
 
-int hcalc(string_view event_name, list<any> param)
+int hcalc(helium_command_context& ctx)
 {
+	hcalc_expression_string = ctx.GetArgument<GreedyString>("<expression>");
+	const bool is_from_console = ctx.GetSource().get_source() == command_source_e::CONSOLE;
+	if (hcalc_expression_string.empty())
+	{
+		return 0;
+	}
+	if (!hcalc_expression_parser.compile(hcalc_expression_string, hcalc_expression))
+	{
+		hcalc_error_strs.clear();
+		hcalc_error_strs.push_back(format("Error: {} Expression: {}",
+			hcalc_expression_parser.error(),
+			hcalc_expression_string));
+
+		for (std::size_t i = 0; i < hcalc_expression_parser.error_count(); ++i)
+		{
+			error_t error = hcalc_expression_parser.get_error(i);
+			hcalc_error_strs.push_back(format("Err: {} Pos: {} Type: [{}] Msg: {} Expression: {}",
+				static_cast<unsigned int>(i),
+				static_cast<unsigned int>(error.token.position),
+				exprtk::parser_error::to_str(error.mode),
+				error.diagnostic,
+				hcalc_expression_string));
+		}
+
+		if (is_from_console) {
+			for (auto& error_str : hcalc_error_strs)
+			{
+				logger.error(error_str);
+			}
+		}
+		return 0;
+	}
+
+	const mpfr::mpreal result = hcalc_expression.value();
+	const string result_str = result.toString();
+	if (is_from_console) {
+		logger.info(result_str);
+	}
 	return 0;
 }
 
@@ -66,6 +108,7 @@ HELIUM_EXTENSION_EXPORT int on_self_load()
 {
 	hcalc_symbol_table.add_constants();
 	hcalc_expression.register_symbol_table(hcalc_symbol_table);
+	command_dispatcher.Register("#hcalc").Then<Argument, GreedyString>("<expression>").Executes(hcalc);
 	return 0;
 }
 
