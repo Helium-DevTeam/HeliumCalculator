@@ -25,8 +25,6 @@
 #include "Helium.h"
 
 #include <string>
-#include <list>
-#include <any>
 #include <format>
 
 #include <exprtk_mpfr_adaptor.hpp>
