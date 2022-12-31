@@ -46,7 +46,7 @@ string hcalc_expression_string;
 parser_t hcalc_expression_parser;
 vector<string> hcalc_error_strs;
 
-HeliumExtensionLogger logger("Helium", "Calculator");
+helium_extension_logger_c logger("Helium", "Calculator");
 
 HELIUM_EXTENSION_EXPORT map<string, string> extension_metadata()
 {
@@ -1140,15 +1140,12 @@ void repl(int argc, char* argv[])
       }
    }
 }
-
+/*
 int main(int argc, char* argv[])
 {
    repl<double>(argc,argv);
    return 0;
 }
-
-
-/*
 
 REPL commands:
 
