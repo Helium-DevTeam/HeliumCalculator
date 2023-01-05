@@ -26,6 +26,7 @@
 
 #include <string>
 #include <format>
+#include <chrono>
 
 #include <exprtk_mpfr_adaptor.hpp>
 #include <exprtk.hpp>
@@ -33,6 +34,7 @@
 using namespace helium;
 using namespace std;
 using namespace exprtk;
+using namespace ftxui;
 
 using hcalc_float_t = mpfr::mpreal;
 using symbol_table_t = symbol_table<hcalc_float_t>;
@@ -51,7 +53,7 @@ helium_extension_logger_c logger("Helium", "Calculator");
 HELIUM_EXTENSION_EXPORT map<string, string> extension_metadata()
 {
 	return {
-		{"extension_name", "Helium Calculator"},
+		{"extension_name", "helium_calculator"},
 		{"author", "Helium DevTeam"},
 		{"url", "https://github.com/Helium-DevTeam/HeliumCalculator"},
 		{"description", "A official calculator extension for Helium."},
@@ -102,11 +104,38 @@ int hcalc(helium_command_context& ctx)
 	return 0;
 }
 
+string hcalc_input;
+
+auto hcalc_main_container = Container::Horizontal({
+    Input(&hcalc_input, "Input expression to calculate"),
+    Button("Calculate", [&]
+    {
+	    hcalc_input = "";
+    }, ButtonOption::Animated()),
+});
+
 HELIUM_EXTENSION_EXPORT int on_self_load()
 {
 	hcalc_symbol_table.add_constants();
 	hcalc_expression.register_symbol_table(hcalc_symbol_table);
 	command_dispatcher.Register("#hcalc").Then<Argument, GreedyString>("<expression>").Executes(hcalc);
+    auto this_wptr = helium_extension_manager.get_extension("helium_calculator");
+    if(auto this_ptr = this_wptr.lock())
+    {
+        using namespace ftxui;
+        logger.debug("Setting TUI renderer");
+	    this_ptr->set_extension_tui_renderer(Renderer(hcalc_main_container, [&]
+	    {
+		    return vbox({
+                text("awa from hcalc") | color(Color::Red),
+                hcalc_main_container->Render() | xflex,
+		    });
+	    }));
+    }
+	else
+    {
+	    logger.error("nope");
+    }
 	return 0;
 }
 
